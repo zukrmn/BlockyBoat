@@ -1,8 +1,0 @@
-com/blockycraft/blockyboat/storage/DataHandler.class
-com/blockycraft/blockyboat/BlockyBoat$1.class
-com/blockycraft/blockyboat/BlockyBoat.class
-com/blockycraft/blockyboat/listeners/BoatInteractListener.class
-com/blockycraft/blockyboat/util/BoatIdentifier.class
-com/blockycraft/blockyboat/storage/StorageManager$BoatInventory.class
-com/blockycraft/blockyboat/storage/StorageManager.class
-com/blockycraft/blockyboat/listeners/BoatBreakListener.class
