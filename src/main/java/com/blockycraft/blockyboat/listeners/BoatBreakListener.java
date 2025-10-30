@@ -32,7 +32,7 @@ public class BoatBreakListener extends VehicleListener {
         Boat boat = (Boat) event.getVehicle();
         String identifier = BoatIdentifier.getIdentifier(boat);
 
-        // Tenta buscar inventário via instância do Boat
+        // Sempre tenta buscar o inventário do barco, independentemente do motivo da destruição
         Inventory inventory = storageManager.getInventory(boat);
 
         // Se não encontrar, tenta usar o identificador diretamente (em caso de mudança de instância)
@@ -40,7 +40,7 @@ public class BoatBreakListener extends VehicleListener {
             inventory = storageManager.getAllInventories().get(identifier);
         }
 
-        // Dropa itens do inventário (se existir)
+        // Dropa itens do inventário (se existir), inclusive em colisão
         if (inventory != null) {
             for (ItemStack item : inventory.getContents()) {
                 if (item != null && item.getType() != Material.AIR) {
@@ -53,6 +53,7 @@ public class BoatBreakListener extends VehicleListener {
 
         // Remove inventário da memória e persistência
         storageManager.removeInventory(boat);
-        // Nota: o próprio evento já dropa o item "barco" normalmente no Beta 1.7.3
+
+        // Nota: no Beta 1.7.3, o próprio evento já dropa tábuas/gravetos da colisão. O barco "item" só é dropado se foi quebrado manualmente.
     }
 }

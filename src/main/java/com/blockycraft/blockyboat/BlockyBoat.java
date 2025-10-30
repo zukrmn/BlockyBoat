@@ -19,52 +19,43 @@ public class BlockyBoat extends JavaPlugin {
     @Override
     public void onEnable() {
         logger = Logger.getLogger("Minecraft");
-
-        // Cria diretório de dados do plugin, se não existir
         if (!getDataFolder().exists()) {
             getDataFolder().mkdirs();
         }
-
-        // Carrega configuração
         loadConfiguration();
 
-        // Inicializa os gerenciadores
         dataHandler = new DataHandler(this);
         storageManager = new StorageManager(this, dataHandler);
 
-        // Carrega dados salvos
         try {
             dataHandler.loadData();
         } catch (Exception e) {
             logger.severe("[BlockyBoat] Falha ao carregar dados dos barcos: " + e.getMessage());
         }
 
-        // Registra os listeners
         getServer().getPluginManager().registerEvent(
-                org.bukkit.event.Event.Type.PLAYER_INTERACT_ENTITY,
-                new BoatInteractListener(this, storageManager),
-                org.bukkit.event.Event.Priority.High,
-                this
+            org.bukkit.event.Event.Type.PLAYER_INTERACT_ENTITY,
+            new BoatInteractListener(this, storageManager),
+            org.bukkit.event.Event.Priority.High,
+            this
         );
         getServer().getPluginManager().registerEvent(
-                org.bukkit.event.Event.Type.VEHICLE_DESTROY,
-                new BoatBreakListener(this, storageManager),
-                org.bukkit.event.Event.Priority.Monitor,
-                this
+            org.bukkit.event.Event.Type.VEHICLE_DESTROY,
+            new BoatBreakListener(this, storageManager),
+            org.bukkit.event.Event.Priority.Monitor,
+            this
         );
 
-        // Ativa auto-save agendado
         startAutoSaveTask();
+
         logger.info("[BlockyBoat] Plugin habilitado com sucesso!");
     }
 
     @Override
     public void onDisable() {
-        // Cancela auto-save agendado
         if (autoSaveTaskId != -1) {
             getServer().getScheduler().cancelTask(autoSaveTaskId);
         }
-        // Salva todos os dados
         try {
             dataHandler.saveData();
             logger.info("[BlockyBoat] Todos os dados dos barcos salvos com sucesso!");
@@ -77,7 +68,6 @@ public class BlockyBoat extends JavaPlugin {
     private void loadConfiguration() {
         File configFile = new File(getDataFolder(), "config.yml");
         if (!configFile.exists()) {
-            // Cria config padrão
             try {
                 configFile.createNewFile();
                 config = new Configuration(configFile);
@@ -96,7 +86,7 @@ public class BlockyBoat extends JavaPlugin {
 
     private void startAutoSaveTask() {
         int interval = config.getInt("auto-save-interval", 5);
-        long ticks = interval * 60 * 20L; // minutos para ticks
+        long ticks = interval * 60 * 20L;
         autoSaveTaskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
             @Override
             public void run() {

@@ -17,19 +17,15 @@ public class BoatInteractListener extends PlayerListener {
 
     public BoatInteractListener(BlockyBoat plugin, StorageManager storageManager) {
         this.storageManager = storageManager;
-
         // Busca o método correto para abrir inventário usando reflection
         try {
             Class<?> entityPlayerClass = net.minecraft.server.EntityPlayer.class;
-            // Tenta "openInventory" ou variantes obfuscadas
             try {
                 openInventoryMethod = entityPlayerClass.getMethod("openInventory", net.minecraft.server.IInventory.class);
             } catch (NoSuchMethodException e1) {
-                // Tenta método obfuscado "a"
                 try {
                     openInventoryMethod = entityPlayerClass.getMethod("a", net.minecraft.server.IInventory.class);
                 } catch (NoSuchMethodException e2) {
-                    // Procura qualquer método que aceite IInventory como parâmetro
                     for (Method method : entityPlayerClass.getMethods()) {
                         Class<?>[] params = method.getParameterTypes();
                         if (params.length == 1 && params[0].equals(net.minecraft.server.IInventory.class)) {
@@ -57,17 +53,13 @@ public class BoatInteractListener extends PlayerListener {
         if (player.isSneaking()) {
             event.setCancelled(true);
 
-            // Obtém ou cria inventário para este barco
             Inventory inventory = storageManager.getInventory(boat);
 
-            // Usa NMS via reflection para abrir inventário ao player
             try {
                 CraftPlayer craftPlayer = (CraftPlayer) player;
                 net.minecraft.server.EntityPlayer entityPlayer = craftPlayer.getHandle();
-                org.bukkit.craftbukkit.inventory.CraftInventory craftInventory =
-                        (org.bukkit.craftbukkit.inventory.CraftInventory) inventory;
+                org.bukkit.craftbukkit.inventory.CraftInventory craftInventory = (org.bukkit.craftbukkit.inventory.CraftInventory) inventory;
                 net.minecraft.server.IInventory iInventory = craftInventory.getInventory();
-
                 if (openInventoryMethod != null) {
                     openInventoryMethod.invoke(entityPlayer, iInventory);
                 }

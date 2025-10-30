@@ -5,7 +5,6 @@ import com.blockycraft.blockyboat.util.BoatIdentifier;
 import org.bukkit.entity.Boat;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,23 +20,16 @@ public class StorageManager {
 
     public Inventory getInventory(Boat boat) {
         String identifier = BoatIdentifier.getIdentifier(boat);
-
-        // Retorna inventário existente se já criado
         if (inventories.containsKey(identifier)) {
             return inventories.get(identifier);
         }
-
-        // Cria inventário customizado
-        BoatInventory boatInventory = new BoatInventory("Boat", 27); // Tamanho padrão, atualizado depois
-        // Envolve em CraftInventory para integração com Bukkit/NMS
+        BoatInventory boatInventory = new BoatInventory("Boat", 27);
         Inventory inventory = new org.bukkit.craftbukkit.inventory.CraftInventory(boatInventory);
 
-        // Carrega itens salvos, se houver
         ItemStack[] savedItems = dataHandler.getStoredItems(identifier);
         if (savedItems != null) {
             inventory.setContents(savedItems);
         }
-
         inventories.put(identifier, inventory);
         return inventory;
     }
@@ -65,7 +57,6 @@ public class StorageManager {
         this.dirty = false;
     }
 
-    // Inner class: implementa IInventory para o barco (Beta 1.7.3)
     private static class BoatInventory implements net.minecraft.server.IInventory {
         private final net.minecraft.server.ItemStack[] items;
         private final String name;
@@ -120,9 +111,7 @@ public class StorageManager {
         }
 
         @Override
-        public void update() {
-            // Não implementado
-        }
+        public void update() {}
 
         @Override
         public boolean a_(net.minecraft.server.EntityHuman entityhuman) {
