@@ -1,6 +1,3 @@
-// BlockyBoatDatabase.java
-// Corrigido para usar logger padrão "Minecraft"
-
 package com.blockycraft.blockyboat.storage;
 
 import java.sql.*;
@@ -106,7 +103,7 @@ public class BlockyBoatDatabase {
 
     public ItemStack[] loadBoatInventory(String boatId, int inventorySize) throws SQLException {
         if (connection == null) throw new SQLException("Conexão SQLite não foi inicializada!");
-        List<ItemStack> items = new ArrayList<ItemStack>();
+        List<ItemStack> items = new ArrayList<>();
         for (int i = 0; i < inventorySize; ++i) items.add(null);
 
         PreparedStatement ps = connection.prepareStatement(

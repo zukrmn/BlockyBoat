@@ -1,6 +1,3 @@
-// StorageManager.java
-// Corrigido para funcionar com Bukkit 1.7.3 - inventário customizado BoatInventory
-
 package com.blockycraft.blockyboat.storage;
 
 import com.blockycraft.blockyboat.util.BoatIdentifier;
@@ -15,7 +12,7 @@ public class StorageManager {
     private final BlockyBoatDatabase database;
     private final int inventorySize;
     private final String inventoryTitle;
-    private final Map<String, Inventory> inventories = new HashMap<String, Inventory>();
+    private final Map<String, Inventory> inventories = new HashMap<>();
 
     public StorageManager(BlockyBoatDatabase database, int inventorySize, String inventoryTitle) {
         this.database = database;
@@ -82,6 +79,7 @@ public class StorageManager {
     private static class BoatInventory implements net.minecraft.server.IInventory {
         private final net.minecraft.server.ItemStack[] items;
         private final String name;
+
         public BoatInventory(String name, int size) {
             this.name = name;
             this.items = new net.minecraft.server.ItemStack[size];
@@ -103,9 +101,7 @@ public class StorageManager {
             }
             return null;
         }
-        @Override public void setItem(int i, net.minecraft.server.ItemStack itemstack) {
-            items[i] = itemstack;
-        }
+        @Override public void setItem(int i, net.minecraft.server.ItemStack itemstack) { items[i] = itemstack; }
         @Override public String getName() { return name; }
         @Override public int getMaxStackSize() { return 64; }
         @Override public void update() {}

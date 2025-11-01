@@ -7,9 +7,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerListener;
 import org.bukkit.inventory.Inventory;
-
 import java.lang.reflect.Method;
 
+/**
+ * Listener que abre inventário do barco persistente ao Shift + Clique Direito.
+ * Agora usa identificador persistente por posição.
+ */
 public class BoatInteractListener extends PlayerListener {
     private final StorageManager storageManager;
     private Method openInventoryMethod = null;
@@ -41,7 +44,6 @@ public class BoatInteractListener extends PlayerListener {
 
     @Override
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        // Só se for barco
         if (!(event.getRightClicked() instanceof Boat)) {
             return;
         }
@@ -54,7 +56,8 @@ public class BoatInteractListener extends PlayerListener {
             try {
                 CraftPlayer craftPlayer = (CraftPlayer) player;
                 net.minecraft.server.EntityPlayer entityPlayer = craftPlayer.getHandle();
-                org.bukkit.craftbukkit.inventory.CraftInventory craftInventory = (org.bukkit.craftbukkit.inventory.CraftInventory) inventory;
+                org.bukkit.craftbukkit.inventory.CraftInventory craftInventory =
+                    (org.bukkit.craftbukkit.inventory.CraftInventory) inventory;
                 net.minecraft.server.IInventory iInventory = craftInventory.getInventory();
                 if (openInventoryMethod != null) {
                     openInventoryMethod.invoke(entityPlayer, iInventory);

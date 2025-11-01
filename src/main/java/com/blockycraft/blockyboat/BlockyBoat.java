@@ -6,7 +6,6 @@ import com.blockycraft.blockyboat.storage.BlockyBoatDatabase;
 import com.blockycraft.blockyboat.storage.StorageManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
-
 import java.io.File;
 import java.sql.SQLException;
 import java.util.logging.Logger;
@@ -41,20 +40,21 @@ public class BlockyBoat extends JavaPlugin {
         storageManager = new StorageManager(blockyBoatDatabase, inventorySize, inventoryTitle);
 
         getServer().getPluginManager().registerEvent(
-                org.bukkit.event.Event.Type.PLAYER_INTERACT_ENTITY,
-                new BoatInteractListener(this, storageManager),
-                org.bukkit.event.Event.Priority.High,
-                this
+            org.bukkit.event.Event.Type.PLAYER_INTERACT_ENTITY,
+            new BoatInteractListener(this, storageManager),
+            org.bukkit.event.Event.Priority.High,
+            this
         );
         getServer().getPluginManager().registerEvent(
-                org.bukkit.event.Event.Type.VEHICLE_DESTROY,
-                new BoatBreakListener(this, storageManager),
-                org.bukkit.event.Event.Priority.Monitor,
-                this
+            org.bukkit.event.Event.Type.VEHICLE_DESTROY,
+            new BoatBreakListener(this, storageManager),
+            org.bukkit.event.Event.Priority.Monitor,
+            this
         );
+
         startAutoSaveTask();
 
-        logger.info("[BlockyBoat] Plugin habilitado com armazenamento via SQLite!");
+        logger.info("[BlockyBoat] Plugin habilitado com armazenamento via SQLite e identificador persistente!");
     }
 
     @Override
@@ -62,6 +62,7 @@ public class BlockyBoat extends JavaPlugin {
         if (autoSaveTaskId != -1) {
             getServer().getScheduler().cancelTask(autoSaveTaskId);
         }
+
         // Salva todos os inventários dos barcos ativos
         for (String id : storageManager.getAllInventories().keySet()) {
             storageManager.saveInventoryById(id);
@@ -109,15 +110,12 @@ public class BlockyBoat extends JavaPlugin {
     public StorageManager getStorageManager() {
         return storageManager;
     }
-
     public BlockyBoatDatabase getBlockyBoatDatabase() {
         return blockyBoatDatabase;
     }
-
     public Configuration getPluginConfig() {
         return config;
     }
-
     public Logger getPluginLogger() {
         return logger;
     }

@@ -20,21 +20,17 @@ public class BoatBreakListener extends VehicleListener {
 
     @Override
     public void onVehicleDestroy(VehicleDestroyEvent event) {
-        // Verifica se o veículo é um barco
         if (!(event.getVehicle() instanceof Boat)) {
             return;
         }
-        // Ignora o evento caso ele seja cancelado
         if (event.isCancelled()) {
             return;
         }
         Boat boat = (Boat) event.getVehicle();
         String identifier = BoatIdentifier.getIdentifier(boat);
 
-        // Busca inventário persistente do barco
         Inventory inventory = storageManager.getInventory(boat);
 
-        // Dropa itens armazenados no inventário
         if (inventory != null) {
             for (ItemStack item : inventory.getContents()) {
                 if (item != null && item.getTypeId() != 0 && item.getAmount() > 0) {
@@ -44,9 +40,7 @@ public class BoatBreakListener extends VehicleListener {
         } else {
             plugin.getPluginLogger().warning("[BlockyBoat] Inventário não encontrado na destruição do barco: " + identifier);
         }
-
-        // Remove inventário do barco (deleta dos registros)
         storageManager.removeInventory(boat);
-        // O próprio evento já dropa os itens padrões (gravetos/tábuas)
+        // O evento já dropa os itens padrão do barco
     }
 }
