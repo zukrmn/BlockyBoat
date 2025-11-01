@@ -1,6 +1,5 @@
 package com.blockycraft.blockyboat.listeners;
 
-import com.blockycraft.blockyboat.BlockyBoat;
 import com.blockycraft.blockyboat.storage.StorageManager;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Boat;
@@ -15,9 +14,9 @@ public class BoatInteractListener extends PlayerListener {
     private final StorageManager storageManager;
     private Method openInventoryMethod = null;
 
-    public BoatInteractListener(BlockyBoat plugin, StorageManager storageManager) {
+    public BoatInteractListener(Object unusedPlugin, StorageManager storageManager) {
         this.storageManager = storageManager;
-        // Busca o método correto para abrir inventário usando reflection
+        // Reflection para encontrar método do EntityPlayer para abrir inventário
         try {
             Class<?> entityPlayerClass = net.minecraft.server.EntityPlayer.class;
             try {
@@ -36,25 +35,22 @@ public class BoatInteractListener extends PlayerListener {
                 }
             }
         } catch (Exception e) {
-            plugin.getPluginLogger().severe("[BlockyBoat] Falha ao localizar método para abrir inventário: " + e.getMessage());
+            System.err.println("[BlockyBoat] Falha ao localizar método para abrir inventário: " + e.getMessage());
         }
     }
 
     @Override
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        // Verifica se a entidade clicada é um barco
+        // Só se for barco
         if (!(event.getRightClicked() instanceof Boat)) {
             return;
         }
         Player player = event.getPlayer();
         Boat boat = (Boat) event.getRightClicked();
-
-        // Se o jogador estiver agachado (Shift), abre o inventário do barco
+        // Só se estiver agachado (Shift)
         if (player.isSneaking()) {
             event.setCancelled(true);
-
             Inventory inventory = storageManager.getInventory(boat);
-
             try {
                 CraftPlayer craftPlayer = (CraftPlayer) player;
                 net.minecraft.server.EntityPlayer entityPlayer = craftPlayer.getHandle();
@@ -64,9 +60,9 @@ public class BoatInteractListener extends PlayerListener {
                     openInventoryMethod.invoke(entityPlayer, iInventory);
                 }
             } catch (Exception e) {
-                // Falha silenciosa: não abre inventário se der erro
+                // Falha ignorada para evitar crash do servidor em incompatibilidade
             }
         }
-        // Se não estiver agachado, permite comportamento normal: embarcar no barco
+        // Se não estiver agachado, embarca normalmente
     }
 }

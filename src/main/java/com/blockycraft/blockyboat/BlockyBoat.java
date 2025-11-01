@@ -2,19 +2,24 @@ package com.blockycraft.blockyboat;
 
 import com.blockycraft.blockyboat.listeners.BoatBreakListener;
 import com.blockycraft.blockyboat.listeners.BoatInteractListener;
-import com.blockycraft.blockyboat.storage.DataHandler;
+import com.blockycraft.blockyboat.storage.BlockyBoatDatabase;
 import com.blockycraft.blockyboat.storage.StorageManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
+
 import java.io.File;
+import java.sql.SQLException;
 import java.util.logging.Logger;
 
 public class BlockyBoat extends JavaPlugin {
     private StorageManager storageManager;
-    private DataHandler dataHandler;
+    private BlockyBoatDatabase blockyBoatDatabase;
     private int autoSaveTaskId = -1;
     private Logger logger;
     private Configuration config;
+    private int inventorySize;
+    private String inventoryTitle;
+    private int autoSaveInterval;
 
     @Override
     public void onEnable() {
@@ -24,31 +29,32 @@ public class BlockyBoat extends JavaPlugin {
         }
         loadConfiguration();
 
-        dataHandler = new DataHandler(this);
-        storageManager = new StorageManager(this, dataHandler);
-
+        blockyBoatDatabase = new BlockyBoatDatabase(this);
         try {
-            dataHandler.loadData();
-        } catch (Exception e) {
-            logger.severe("[BlockyBoat] Falha ao carregar dados dos barcos: " + e.getMessage());
+            blockyBoatDatabase.connect();
+        } catch (SQLException e) {
+            logger.severe("[BlockyBoat] Falha ao conectar ao banco SQLite: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
         }
 
-        getServer().getPluginManager().registerEvent(
-            org.bukkit.event.Event.Type.PLAYER_INTERACT_ENTITY,
-            new BoatInteractListener(this, storageManager),
-            org.bukkit.event.Event.Priority.High,
-            this
-        );
-        getServer().getPluginManager().registerEvent(
-            org.bukkit.event.Event.Type.VEHICLE_DESTROY,
-            new BoatBreakListener(this, storageManager),
-            org.bukkit.event.Event.Priority.Monitor,
-            this
-        );
+        storageManager = new StorageManager(blockyBoatDatabase, inventorySize, inventoryTitle);
 
+        getServer().getPluginManager().registerEvent(
+                org.bukkit.event.Event.Type.PLAYER_INTERACT_ENTITY,
+                new BoatInteractListener(this, storageManager),
+                org.bukkit.event.Event.Priority.High,
+                this
+        );
+        getServer().getPluginManager().registerEvent(
+                org.bukkit.event.Event.Type.VEHICLE_DESTROY,
+                new BoatBreakListener(this, storageManager),
+                org.bukkit.event.Event.Priority.Monitor,
+                this
+        );
         startAutoSaveTask();
 
-        logger.info("[BlockyBoat] Plugin habilitado com sucesso!");
+        logger.info("[BlockyBoat] Plugin habilitado com armazenamento via SQLite!");
     }
 
     @Override
@@ -56,11 +62,12 @@ public class BlockyBoat extends JavaPlugin {
         if (autoSaveTaskId != -1) {
             getServer().getScheduler().cancelTask(autoSaveTaskId);
         }
-        try {
-            dataHandler.saveData();
-            logger.info("[BlockyBoat] Todos os dados dos barcos salvos com sucesso!");
-        } catch (Exception e) {
-            logger.severe("[BlockyBoat] Falha ao salvar dados dos barcos: " + e.getMessage());
+        // Salva todos os inventários dos barcos ativos
+        for (String id : storageManager.getAllInventories().keySet()) {
+            storageManager.saveInventoryById(id);
+        }
+        if (blockyBoatDatabase != null) {
+            blockyBoatDatabase.close();
         }
         logger.info("[BlockyBoat] Plugin desabilitado!");
     }
@@ -82,18 +89,18 @@ public class BlockyBoat extends JavaPlugin {
             config = new Configuration(configFile);
             config.load();
         }
+        autoSaveInterval = config.getInt("auto-save-interval", 5);
+        inventorySize = config.getInt("inventory-size", 27);
+        inventoryTitle = config.getString("inventory-title", "Boat Storage");
     }
 
     private void startAutoSaveTask() {
-        int interval = config.getInt("auto-save-interval", 5);
-        long ticks = interval * 60 * 20L;
+        long ticks = autoSaveInterval * 60 * 20L;
         autoSaveTaskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
             @Override
             public void run() {
-                try {
-                    dataHandler.saveData();
-                } catch (Exception e) {
-                    logger.severe("[BlockyBoat] Auto-save falhou: " + e.getMessage());
+                for (String id : storageManager.getAllInventories().keySet()) {
+                    storageManager.saveInventoryById(id);
                 }
             }
         }, ticks, ticks);
@@ -103,8 +110,8 @@ public class BlockyBoat extends JavaPlugin {
         return storageManager;
     }
 
-    public DataHandler getDataHandler() {
-        return dataHandler;
+    public BlockyBoatDatabase getBlockyBoatDatabase() {
+        return blockyBoatDatabase;
     }
 
     public Configuration getPluginConfig() {

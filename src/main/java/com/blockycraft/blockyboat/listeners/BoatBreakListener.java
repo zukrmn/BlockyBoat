@@ -3,7 +3,6 @@ package com.blockycraft.blockyboat.listeners;
 import com.blockycraft.blockyboat.BlockyBoat;
 import com.blockycraft.blockyboat.storage.StorageManager;
 import com.blockycraft.blockyboat.util.BoatIdentifier;
-import org.bukkit.Material;
 import org.bukkit.entity.Boat;
 import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.event.vehicle.VehicleListener;
@@ -32,18 +31,13 @@ public class BoatBreakListener extends VehicleListener {
         Boat boat = (Boat) event.getVehicle();
         String identifier = BoatIdentifier.getIdentifier(boat);
 
-        // Sempre tenta buscar o inventário do barco, independentemente do motivo da destruição
+        // Busca inventário persistente do barco
         Inventory inventory = storageManager.getInventory(boat);
 
-        // Se não encontrar, tenta usar o identificador diretamente (em caso de mudança de instância)
-        if (inventory == null) {
-            inventory = storageManager.getAllInventories().get(identifier);
-        }
-
-        // Dropa itens do inventário (se existir), inclusive em colisão
+        // Dropa itens armazenados no inventário
         if (inventory != null) {
             for (ItemStack item : inventory.getContents()) {
-                if (item != null && item.getType() != Material.AIR) {
+                if (item != null && item.getTypeId() != 0 && item.getAmount() > 0) {
                     boat.getWorld().dropItemNaturally(boat.getLocation(), item);
                 }
             }
@@ -51,9 +45,8 @@ public class BoatBreakListener extends VehicleListener {
             plugin.getPluginLogger().warning("[BlockyBoat] Inventário não encontrado na destruição do barco: " + identifier);
         }
 
-        // Remove inventário da memória e persistência
+        // Remove inventário do barco (deleta dos registros)
         storageManager.removeInventory(boat);
-
-        // Nota: no Beta 1.7.3, o próprio evento já dropa tábuas/gravetos da colisão. O barco "item" só é dropado se foi quebrado manualmente.
+        // O próprio evento já dropa os itens padrões (gravetos/tábuas)
     }
 }

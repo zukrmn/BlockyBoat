@@ -1,23 +1,22 @@
-Teste# BlockyBoat
+# BlockyBoat
 
-BlockyBoat é um plugin para o servidor BlockyCRAFT que adiciona inventário acessível aos barcos (boats) no Minecraft Beta 1.7.3. Permite que jogadores armazenem e transportem itens em barcos, criando uma nova dinâmica logística no servidor.
+BlockyBoat é um plugin para servidor Minecraft Beta 1.7.3 (Uberbukkit/CraftBukkit 1060) que adiciona inventário customizado e **persistente** aos barcos (boats) usando **SQLite**. Permite aos jogadores armazenar e transportar itens em barcos, criando uma nova dinâmica logística no servidor. Os itens do barco sobrevivem a reinícios e crashes do servidor.
 
 ## Funcionalidades
 
-- Inventário customizado nos barcos, com tamanho e título configuráveis.
+- Inventário customizado nos barcos, com tamanho e título configuráveis (`config.yml`).
+- Inventário persistido em banco SQLite: dados permanecem salvos mesmo após reiniciar/crash.
 - Inventário acessível via **Shift + Clique Direito** no barco.
-- Persistência dos itens armazenados, sobrevivendo a reinícios de servidor (persistidos em data.yml).
-- Drop automático dos itens do inventário quando o barco é destruído.
+- Drop automático dos itens do inventário do barco ao ser destruído (juntamente com itens padrão do Minecraft).
 - Compatível com Uberbukkit/CraftBukkit 1060 (Java 8).
-- Configuração do plugin via `config.yml`: tamanho, título do inventário, intervalo de auto-save.
-- Auto-save dos dados a cada X minutos (configurável).
+- Auto-save dos dados dos barcos a cada X minutos (configurável).
 
 ## Como Funciona
 
 1. O jogador posiciona um barco.
 2. Segure **Shift** e clique com o botão direito do mouse no barco para abrir o inventário.
 3. Armazene os itens desejados.
-4. Se o barco for destruído, todos os itens armazenados são automaticamente largados no solo.
+4. Se o barco for destruído, todos os itens armazenados são automaticamente largados junto aos drops padrão.
 
 ## Configuração
 
@@ -29,11 +28,25 @@ O arquivo `config.yml` permite definir:
 
 ## Arquitetura
 
-- **BlockyBoat.java**: classe principal, controla ciclo do plugin, configuração e listeners.
-- **listeners/**: contém os listeners para eventos de interação e destruição dos barcos.
-- **storage/**: gerenciadores de persistência dos dados, inventário e serialização.
-- **util/**: utilitário para gerar identificadores únicos de barcos.
-- **resources/**: arquivos de configuração e plugin definition.
+- `BlockyBoat.java`: classe principal, controla ciclo do plugin e inicialização do SQLite.
+- `storage/BlockyBoatDatabase.java`: banco SQLite, gerencia persistência dos inventários.
+- `storage/StorageManager.java`: gerencia cache de inventários por barco.
+- `util/BoatIdentifier.java`: utilitário para gerar identificadores únicos de barcos.
+- `listeners/BoatBreakListener.java`: dropa o inventário do barco ao quebrar.
+- `listeners/BoatInteractListener.java`: abre inventário ao Shift + Clique Direito.
+- `resources/config.yml`: configuração.
+- `resources/plugin.yml`: metadados do plugin.
+
+## Requisitos
+
+- Java 8
+- CraftBukkit/Uberbukkit 1.7.3 (build 1060)
+- Driver JDBC SQLite (deve estar disponível no Java SE por padrão)
+
+## Instalação
+
+1. Baixe e coloque o plugin em `plugins/`.
+2. Inicie o servidor. O banco `blockyboat.db` será criado na pasta de dados do plugin.
 
 ## Reportar bugs ou requisitar features
 

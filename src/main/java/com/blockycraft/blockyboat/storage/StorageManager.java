@@ -1,21 +1,26 @@
+// StorageManager.java
+// Corrigido para funcionar com Bukkit 1.7.3 - inventário customizado BoatInventory
+
 package com.blockycraft.blockyboat.storage;
 
-import com.blockycraft.blockyboat.BlockyBoat;
 import com.blockycraft.blockyboat.util.BoatIdentifier;
 import org.bukkit.entity.Boat;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class StorageManager {
-    private final DataHandler dataHandler;
-    private final Map<String, Inventory> inventories;
-    private boolean dirty = false;
+    private final BlockyBoatDatabase database;
+    private final int inventorySize;
+    private final String inventoryTitle;
+    private final Map<String, Inventory> inventories = new HashMap<String, Inventory>();
 
-    public StorageManager(BlockyBoat plugin, DataHandler dataHandler) {
-        this.dataHandler = dataHandler;
-        this.inventories = new HashMap<String, Inventory>();
+    public StorageManager(BlockyBoatDatabase database, int inventorySize, String inventoryTitle) {
+        this.database = database;
+        this.inventorySize = inventorySize;
+        this.inventoryTitle = inventoryTitle;
     }
 
     public Inventory getInventory(Boat boat) {
@@ -23,61 +28,67 @@ public class StorageManager {
         if (inventories.containsKey(identifier)) {
             return inventories.get(identifier);
         }
-        BoatInventory boatInventory = new BoatInventory("Boat", 27);
-        Inventory inventory = new org.bukkit.craftbukkit.inventory.CraftInventory(boatInventory);
-
-        ItemStack[] savedItems = dataHandler.getStoredItems(identifier);
-        if (savedItems != null) {
-            inventory.setContents(savedItems);
+        Inventory inventory = new org.bukkit.craftbukkit.inventory.CraftInventory(
+            new BoatInventory(inventoryTitle, inventorySize)
+        );
+        try {
+            ItemStack[] loaded = database.loadBoatInventory(identifier, inventorySize);
+            inventory.setContents(loaded);
+        } catch (SQLException e) {
+            // Log ou aviso, ignore inventário vazio
         }
         inventories.put(identifier, inventory);
         return inventory;
     }
 
+    public void saveInventory(Boat boat) {
+        String identifier = BoatIdentifier.getIdentifier(boat);
+        Inventory inventory = inventories.get(identifier);
+        if (inventory != null) {
+            try {
+                database.saveBoatInventory(identifier, inventory.getContents());
+            } catch (SQLException e) {
+                // Log ou aviso
+            }
+        }
+    }
+
+    public void saveInventoryById(String identifier) {
+        Inventory inventory = inventories.get(identifier);
+        if (inventory != null) {
+            try {
+                database.saveBoatInventory(identifier, inventory.getContents());
+            } catch (SQLException e) {
+                // Log ou aviso
+            }
+        }
+    }
+
     public void removeInventory(Boat boat) {
         String identifier = BoatIdentifier.getIdentifier(boat);
         inventories.remove(identifier);
-        dataHandler.removeStoredItems(identifier);
-        dirty = true;
+        try {
+            database.deleteBoat(identifier);
+        } catch (SQLException e) {
+            // Log ou aviso
+        }
     }
 
     public Map<String, Inventory> getAllInventories() {
         return inventories;
     }
 
-    public void markDirty() {
-        this.dirty = true;
-    }
-
-    public boolean isDirty() {
-        return dirty;
-    }
-
-    public void clearDirty() {
-        this.dirty = false;
-    }
-
+    // Inventário personalizado compatível com Bukkit 1.7.3
     private static class BoatInventory implements net.minecraft.server.IInventory {
         private final net.minecraft.server.ItemStack[] items;
         private final String name;
-
         public BoatInventory(String name, int size) {
             this.name = name;
             this.items = new net.minecraft.server.ItemStack[size];
         }
-
-        @Override
-        public int getSize() {
-            return items.length;
-        }
-
-        @Override
-        public net.minecraft.server.ItemStack getItem(int i) {
-            return items[i];
-        }
-
-        @Override
-        public net.minecraft.server.ItemStack splitStack(int i, int j) {
+        @Override public int getSize() { return items.length; }
+        @Override public net.minecraft.server.ItemStack getItem(int i) { return items[i]; }
+        @Override public net.minecraft.server.ItemStack splitStack(int i, int j) {
             if (items[i] != null) {
                 net.minecraft.server.ItemStack itemstack;
                 if (items[i].count <= j) {
@@ -86,41 +97,19 @@ public class StorageManager {
                     return itemstack;
                 } else {
                     itemstack = items[i].a(j);
-                    if (items[i].count == 0) {
-                        items[i] = null;
-                    }
+                    if (items[i].count == 0) { items[i] = null; }
                     return itemstack;
                 }
             }
             return null;
         }
-
-        @Override
-        public void setItem(int i, net.minecraft.server.ItemStack itemstack) {
+        @Override public void setItem(int i, net.minecraft.server.ItemStack itemstack) {
             items[i] = itemstack;
         }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public int getMaxStackSize() {
-            return 64;
-        }
-
-        @Override
-        public void update() {}
-
-        @Override
-        public boolean a_(net.minecraft.server.EntityHuman entityhuman) {
-            return true;
-        }
-
-        @Override
-        public net.minecraft.server.ItemStack[] getContents() {
-            return items;
-        }
+        @Override public String getName() { return name; }
+        @Override public int getMaxStackSize() { return 64; }
+        @Override public void update() {}
+        @Override public boolean a_(net.minecraft.server.EntityHuman entityhuman) { return true; }
+        @Override public net.minecraft.server.ItemStack[] getContents() { return items; }
     }
 }
