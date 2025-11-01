@@ -4,6 +4,10 @@ import com.blockycraft.blockyboat.listeners.BoatBreakListener;
 import com.blockycraft.blockyboat.listeners.BoatInteractListener;
 import com.blockycraft.blockyboat.storage.BlockyBoatDatabase;
 import com.blockycraft.blockyboat.storage.StorageManager;
+import com.blockycraft.blockyboat.util.BoatRegistry;
+import org.bukkit.Server;
+import org.bukkit.World;
+import org.bukkit.entity.Boat;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
 import java.io.File;
@@ -23,10 +27,9 @@ public class BlockyBoat extends JavaPlugin {
     @Override
     public void onEnable() {
         logger = Logger.getLogger("Minecraft");
-        if (!getDataFolder().exists()) {
-            getDataFolder().mkdirs();
-        }
+        if (!getDataFolder().exists()) getDataFolder().mkdirs();
         loadConfiguration();
+        BoatRegistry.loadRegistry(new File(getDataFolder(), "boats.db"));
 
         blockyBoatDatabase = new BlockyBoatDatabase(this);
         try {
@@ -36,8 +39,8 @@ public class BlockyBoat extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-
         storageManager = new StorageManager(blockyBoatDatabase, inventorySize, inventoryTitle);
+        matchAllBoats();
 
         getServer().getPluginManager().registerEvent(
             org.bukkit.event.Event.Type.PLAYER_INTERACT_ENTITY,
@@ -47,14 +50,13 @@ public class BlockyBoat extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvent(
             org.bukkit.event.Event.Type.VEHICLE_DESTROY,
-            new BoatBreakListener(this, storageManager),
+            new BoatBreakListener(storageManager),
             org.bukkit.event.Event.Priority.Monitor,
             this
         );
 
         startAutoSaveTask();
-
-        logger.info("[BlockyBoat] Plugin habilitado com armazenamento via SQLite e identificador persistente!");
+        logger.info("[BlockyBoat] Plugin habilitado com identificador único por barco!");
     }
 
     @Override
@@ -62,15 +64,13 @@ public class BlockyBoat extends JavaPlugin {
         if (autoSaveTaskId != -1) {
             getServer().getScheduler().cancelTask(autoSaveTaskId);
         }
-
-        // Salva todos os inventários dos barcos ativos
         for (String id : storageManager.getAllInventories().keySet()) {
             storageManager.saveInventoryById(id);
         }
-        if (blockyBoatDatabase != null) {
-            blockyBoatDatabase.close();
-        }
+        if (blockyBoatDatabase != null) blockyBoatDatabase.close();
+        BoatRegistry.saveRegistry(new File(getDataFolder(), "boats.db"));
         logger.info("[BlockyBoat] Plugin desabilitado!");
+        BoatRegistry.clearAll();
     }
 
     private void loadConfiguration() {
@@ -103,20 +103,31 @@ public class BlockyBoat extends JavaPlugin {
                 for (String id : storageManager.getAllInventories().keySet()) {
                     storageManager.saveInventoryById(id);
                 }
+                BoatRegistry.saveRegistry(new File(getDataFolder(), "boats.db"));
             }
         }, ticks, ticks);
     }
 
-    public StorageManager getStorageManager() {
-        return storageManager;
+    // Matching pós-reboot: associa entityId a boatId baseado no arquivo boats.db
+    private void matchAllBoats() {
+        Server server = getServer();
+        for (World world : server.getWorlds()) {
+            for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                if (entity instanceof Boat) {
+                    Boat boat = (Boat) entity;
+                    String boatId = BoatRegistry.findBoatIdForSpawn(world, boat.getLocation());
+                    if (boatId != null) {
+                        BoatRegistry.mapEntityToBoatId(boat.getEntityId(), boatId); // em vez de acesso direto ao campo privado
+                    } else {
+                        BoatRegistry.registerBoat(boat);
+                    }
+                }
+            }
+        }
     }
-    public BlockyBoatDatabase getBlockyBoatDatabase() {
-        return blockyBoatDatabase;
-    }
-    public Configuration getPluginConfig() {
-        return config;
-    }
-    public Logger getPluginLogger() {
-        return logger;
-    }
+
+    public StorageManager getStorageManager() { return storageManager; }
+    public BlockyBoatDatabase getBlockyBoatDatabase() { return blockyBoatDatabase; }
+    public Configuration getPluginConfig() { return config; }
+    public Logger getPluginLogger() { return logger; }
 }

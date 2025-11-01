@@ -1,6 +1,6 @@
 package com.blockycraft.blockyboat.storage;
 
-import com.blockycraft.blockyboat.util.BoatIdentifier;
+import com.blockycraft.blockyboat.util.BoatRegistry;
 import org.bukkit.entity.Boat;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -21,65 +21,56 @@ public class StorageManager {
     }
 
     public Inventory getInventory(Boat boat) {
-        String identifier = BoatIdentifier.getIdentifier(boat);
-        if (inventories.containsKey(identifier)) {
-            return inventories.get(identifier);
+        BoatRegistry.registerBoat(boat); // garante boatId
+        String boatId = BoatRegistry.getBoatId(boat);
+        if (boatId == null) return null;
+        if (inventories.containsKey(boatId)) {
+            return inventories.get(boatId);
         }
         Inventory inventory = new org.bukkit.craftbukkit.inventory.CraftInventory(
             new BoatInventory(inventoryTitle, inventorySize)
         );
         try {
-            ItemStack[] loaded = database.loadBoatInventory(identifier, inventorySize);
+            ItemStack[] loaded = database.loadBoatInventory(boatId, inventorySize);
             inventory.setContents(loaded);
-        } catch (SQLException e) {
-            // Log ou aviso, ignore inventário vazio
-        }
-        inventories.put(identifier, inventory);
+        } catch (SQLException e) {}
+        inventories.put(boatId, inventory);
         return inventory;
     }
 
     public void saveInventory(Boat boat) {
-        String identifier = BoatIdentifier.getIdentifier(boat);
-        Inventory inventory = inventories.get(identifier);
+        String boatId = BoatRegistry.getBoatId(boat);
+        Inventory inventory = inventories.get(boatId);
         if (inventory != null) {
             try {
-                database.saveBoatInventory(identifier, inventory.getContents());
-            } catch (SQLException e) {
-                // Log ou aviso
-            }
+                database.saveBoatInventory(boatId, inventory.getContents());
+            } catch (SQLException e) {}
         }
     }
 
-    public void saveInventoryById(String identifier) {
-        Inventory inventory = inventories.get(identifier);
+    public void saveInventoryById(String boatId) {
+        Inventory inventory = inventories.get(boatId);
         if (inventory != null) {
             try {
-                database.saveBoatInventory(identifier, inventory.getContents());
-            } catch (SQLException e) {
-                // Log ou aviso
-            }
+                database.saveBoatInventory(boatId, inventory.getContents());
+            } catch (SQLException e) {}
         }
     }
 
     public void removeInventory(Boat boat) {
-        String identifier = BoatIdentifier.getIdentifier(boat);
-        inventories.remove(identifier);
+        String boatId = BoatRegistry.getBoatId(boat);
+        inventories.remove(boatId);
         try {
-            database.deleteBoat(identifier);
-        } catch (SQLException e) {
-            // Log ou aviso
-        }
+            database.deleteBoat(boatId);
+        } catch (SQLException e) {}
+        BoatRegistry.unregisterBoat(boat);
     }
 
-    public Map<String, Inventory> getAllInventories() {
-        return inventories;
-    }
+    public Map<String, Inventory> getAllInventories() { return inventories; }
 
-    // Inventário personalizado compatível com Bukkit 1.7.3
     private static class BoatInventory implements net.minecraft.server.IInventory {
         private final net.minecraft.server.ItemStack[] items;
         private final String name;
-
         public BoatInventory(String name, int size) {
             this.name = name;
             this.items = new net.minecraft.server.ItemStack[size];
