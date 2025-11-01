@@ -3,18 +3,13 @@ package com.blockycraft.blockyboat.util;
 import org.bukkit.entity.Boat;
 import org.bukkit.Location;
 import org.bukkit.World;
-
 import java.util.*;
 import java.io.*;
 
 public class BoatRegistry {
-    // entityId -> boatId (sessão do servidor)
     private static final Map<Integer, String> entityIdToBoatId = new HashMap<>();
-
-    // Persistência: boatId -> dados do barco (posição inicial)
     private static final Map<String, BoatInfo> boatPersistMap = new HashMap<>();
 
-    // Informações do barco para matching após reboot
     public static class BoatInfo {
         public final String boatId;
         public final String worldName;
@@ -27,39 +22,32 @@ public class BoatRegistry {
         }
     }
 
-    // Gera boatId único
     public static String generateBoatId() {
         return "boat_" + System.currentTimeMillis() + "_" + ((int) (Math.random() * 100000));
     }
 
-    // Registra boatId para um entityId e salva boat info (usado na criação inicial)
     public static void registerBoat(Boat boat) {
         int entityId = boat.getEntityId();
-        String boatId = entityIdToBoatId.get(entityId);
-        if (boatId == null) {
-            boatId = generateBoatId();
+        if (!entityIdToBoatId.containsKey(entityId)) {
+            String boatId = generateBoatId();
             entityIdToBoatId.put(entityId, boatId);
             Location loc = boat.getLocation();
             boatPersistMap.put(boatId, new BoatInfo(boatId, boat.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
         }
     }
 
-    // Usa entityId atual (durante a sessão)
     public static String getBoatId(Boat boat) {
         return entityIdToBoatId.get(boat.getEntityId());
     }
-
     public static BoatInfo getBoatInfo(String boatId) {
         return boatPersistMap.get(boatId);
     }
-
     public static void unregisterBoat(Boat boat) {
         int entityId = boat.getEntityId();
         String boatId = entityIdToBoatId.remove(entityId);
         if (boatId != null) boatPersistMap.remove(boatId);
     }
 
-    // Matching tolerante após reiniciar
     public static String findBoatIdForSpawn(World world, Location loc) {
         for (BoatInfo info : boatPersistMap.values()) {
             if (info.worldName.equals(world.getName())
@@ -71,12 +59,19 @@ public class BoatRegistry {
         return null;
     }
 
-    // Permite associar entityId a um boatId explicitamente (usado após reboot e matching)
     public static void mapEntityToBoatId(int entityId, String boatId) {
         entityIdToBoatId.put(entityId, boatId);
     }
 
-    // SERIALIZAÇÃO: save/load boatPersistMap para disco
+    // Atualiza a posição mais recente do barco ao salvar!
+    public static void updateBoatPosition(Boat boat) {
+        String boatId = getBoatId(boat);
+        if (boatId != null) {
+            Location loc = boat.getLocation();
+            boatPersistMap.put(boatId, new BoatInfo(boatId, boat.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+        }
+    }
+
     public static void saveRegistry(File file) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             for (BoatInfo info : boatPersistMap.values()) {
@@ -104,7 +99,6 @@ public class BoatRegistry {
         } catch (Exception e) {}
     }
 
-    // Chamada no onDisable
     public static void clearAll() {
         entityIdToBoatId.clear();
         boatPersistMap.clear();

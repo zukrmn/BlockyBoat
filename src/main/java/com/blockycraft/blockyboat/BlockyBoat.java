@@ -18,6 +18,8 @@ public class BlockyBoat extends JavaPlugin {
     private StorageManager storageManager;
     private BlockyBoatDatabase blockyBoatDatabase;
     private int autoSaveTaskId = -1;
+    private int fastSaveTaskId = -1;
+    private int forceBackupTaskId = -1;
     private Logger logger;
     private Configuration config;
     private int inventorySize;
@@ -56,6 +58,8 @@ public class BlockyBoat extends JavaPlugin {
         );
 
         startAutoSaveTask();
+        startFastSaveTask();
+        startForceInventoryBackupTask();
         logger.info("[BlockyBoat] Plugin habilitado com identificador único por barco!");
     }
 
@@ -63,6 +67,12 @@ public class BlockyBoat extends JavaPlugin {
     public void onDisable() {
         if (autoSaveTaskId != -1) {
             getServer().getScheduler().cancelTask(autoSaveTaskId);
+        }
+        if (fastSaveTaskId != -1) {
+            getServer().getScheduler().cancelTask(fastSaveTaskId);
+        }
+        if (forceBackupTaskId != -1) {
+            getServer().getScheduler().cancelTask(forceBackupTaskId);
         }
         for (String id : storageManager.getAllInventories().keySet()) {
             storageManager.saveInventoryById(id);
@@ -108,7 +118,46 @@ public class BlockyBoat extends JavaPlugin {
         }, ticks, ticks);
     }
 
-    // Matching pós-reboot: associa entityId a boatId baseado no arquivo boats.db
+    private void startFastSaveTask() {
+        long ticks = 2 * 20L;
+        fastSaveTaskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
+            @Override
+            public void run() {
+                for (World world : getServer().getWorlds()) {
+                    for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                        if (entity instanceof Boat) {
+                            BoatRegistry.updateBoatPosition((Boat) entity);
+                        }
+                    }
+                }
+                for (String id : storageManager.getAllInventories().keySet()) {
+                    storageManager.saveInventoryById(id);
+                }
+                BoatRegistry.saveRegistry(new File(getDataFolder(), "boats.db"));
+            }
+        }, ticks, ticks);
+    }
+
+    // --- NOVO: Force backup agressivo dos inventários a cada segundo (para evitar race condition de destruição da entidade) ---
+    private void startForceInventoryBackupTask() {
+        long ticks = 20L; // 1 segundo
+        forceBackupTaskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
+            @Override
+            public void run() {
+                for (World world : getServer().getWorlds()) {
+                    for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                        if (entity instanceof Boat) {
+                            Boat boat = (Boat) entity;
+                            storageManager.saveInventory(boat); // backup e persistência
+                            BoatRegistry.updateBoatPosition(boat);
+                        }
+                    }
+                }
+                BoatRegistry.saveRegistry(new File(getDataFolder(), "boats.db"));
+            }
+        }, ticks, ticks);
+    }
+
     private void matchAllBoats() {
         Server server = getServer();
         for (World world : server.getWorlds()) {
@@ -117,7 +166,7 @@ public class BlockyBoat extends JavaPlugin {
                     Boat boat = (Boat) entity;
                     String boatId = BoatRegistry.findBoatIdForSpawn(world, boat.getLocation());
                     if (boatId != null) {
-                        BoatRegistry.mapEntityToBoatId(boat.getEntityId(), boatId); // em vez de acesso direto ao campo privado
+                        BoatRegistry.mapEntityToBoatId(boat.getEntityId(), boatId);
                     } else {
                         BoatRegistry.registerBoat(boat);
                     }

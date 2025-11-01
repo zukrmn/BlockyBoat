@@ -10,8 +10,7 @@ import org.bukkit.inventory.Inventory;
 import java.lang.reflect.Method;
 
 /**
- * Listener que abre inventário do barco persistente ao Shift + Clique Direito.
- * Agora usa identificador persistente por posição.
+ * Listener que abre o inventário persistente ao Shift + Clique Direito no barco.
  */
 public class BoatInteractListener extends PlayerListener {
     private final StorageManager storageManager;
@@ -19,7 +18,6 @@ public class BoatInteractListener extends PlayerListener {
 
     public BoatInteractListener(Object unusedPlugin, StorageManager storageManager) {
         this.storageManager = storageManager;
-        // Reflection para encontrar método do EntityPlayer para abrir inventário
         try {
             Class<?> entityPlayerClass = net.minecraft.server.EntityPlayer.class;
             try {
@@ -44,28 +42,21 @@ public class BoatInteractListener extends PlayerListener {
 
     @Override
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof Boat)) {
-            return;
-        }
+        if (!(event.getRightClicked() instanceof Boat)) return;
         Player player = event.getPlayer();
         Boat boat = (Boat) event.getRightClicked();
-        // Só se estiver agachado (Shift)
         if (player.isSneaking()) {
             event.setCancelled(true);
             Inventory inventory = storageManager.getInventory(boat);
             try {
                 CraftPlayer craftPlayer = (CraftPlayer) player;
                 net.minecraft.server.EntityPlayer entityPlayer = craftPlayer.getHandle();
-                org.bukkit.craftbukkit.inventory.CraftInventory craftInventory =
-                    (org.bukkit.craftbukkit.inventory.CraftInventory) inventory;
+                org.bukkit.craftbukkit.inventory.CraftInventory craftInventory = (org.bukkit.craftbukkit.inventory.CraftInventory) inventory;
                 net.minecraft.server.IInventory iInventory = craftInventory.getInventory();
                 if (openInventoryMethod != null) {
                     openInventoryMethod.invoke(entityPlayer, iInventory);
                 }
-            } catch (Exception e) {
-                // Falha ignorada para evitar crash do servidor em incompatibilidade
-            }
+            } catch (Exception e) {}
         }
-        // Se não estiver agachado, embarca normalmente
     }
 }
